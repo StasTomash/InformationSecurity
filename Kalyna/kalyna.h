@@ -401,7 +401,7 @@ private:
     }
 public:
     Kalyna() = default;
-    bool SetKey(const size_t& _keyLen, const size_t& _blockLen, const std::vector<WORD_TYPE>& key) {
+    bool Configure(const size_t& _keyLen, const size_t& _blockLen) {
         if (!checkKeyAndBlockLenCompatibility(_keyLen, _blockLen)) {
             return false;
         }
@@ -421,10 +421,12 @@ public:
             default:
                 break;
         }
+        this->state = std::vector<WORD_TYPE>(blockLen);
+        this->roundKeys = std::vector<std::vector<WORD_TYPE>>(roundsCnt + 1, std::vector<WORD_TYPE>(blockLen));
+        return true;
+    }
 
-
-        state = std::vector<WORD_TYPE>(blockLen);
-        roundKeys = std::vector<std::vector<WORD_TYPE>>(roundsCnt + 1, std::vector<WORD_TYPE>(blockLen));
+    bool SetKey(const std::vector<WORD_TYPE>& key) {
 
         auto intermediateKey = this->GenerateIntermediateKey(key);
         this->KeyExpandEven(key, intermediateKey);
@@ -462,6 +464,9 @@ public:
             );
             auto textBlock = WordsToBytes(DecipherInternal(cipherBlock));
             text.insert(text.end(), textBlock.begin(), textBlock.end());
+        }
+        while (!text.empty() && text.back() == '\0') {
+            text.pop_back();
         }
         return text;
     }

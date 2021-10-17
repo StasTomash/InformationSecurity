@@ -13,10 +13,12 @@ using namespace std;
 int main() {
     std::vector<WORD_TYPE> key = { 0x0001020304050607ull, 0x08090A0B0C0D0E0Full };
     Kalyna kalyna{};
-    if (!kalyna.SetKey(K_128, K_128, key)) {
+    if (!kalyna.Configure(K_128, K_128)) {
         return 1;
     }
-//    kalyna.LogKalyna();
+    if (!kalyna.SetKey(key)) {
+        return 1;
+    }
 
     ifstream infile;
     infile.open(R"(D:\Study\InformationSecurity\small.txt)", ios::binary | ios::in);
