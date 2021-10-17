@@ -3,8 +3,8 @@ project(InformationSecurity)
 
 set(CMAKE_CXX_STANDARD 17)
 
-#add_executable(Kalyna kalyna_main.cpp Kalyna/kalyna.h Kalyna/constants.h)
-#add_executable(AES main.cpp AES/AES.h AES/constants.h)
+add_executable(kalyna kalyna_main.cpp Kalyna/kalyna.h Kalyna/constants.h)
+add_executable(aes aes_main.cpp AES/AES.h AES/constants.h)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -15,5 +15,14 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-add_executable(kalyna_test Kalyna/kalyna.h Kalyna/constants.h Kalyna/kalyna_test.cpp)
+add_executable(aes_test AES/aes_test.cpp AES/AES.h AES/constants.h)
+target_link_libraries(aes_test gtest_main)
+
+add_executable(kalyna_test Kalyna/kalyna_test.cpp Kalyna/kalyna.h Kalyna/constants.h)
 target_link_libraries(kalyna_test gtest_main)
+
+add_executable(rc4_test RC4/rc4_test.cpp RC4/rc4.h)
+target_link_libraries(rc4_test gtest_main)
+
+add_executable(salsa20_test Salsa20/salsa20_test.cpp Salsa20/salsa20.h)
+target_link_libraries(salsa20_test gtest_main)

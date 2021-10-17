@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
 //
 // Created by stast on 9/12/2021.
 //
@@ -25,7 +27,7 @@ private:
     }
 
     void KeyExpansion(const unsigned char* key /* 4*key_len elements */,
-                      unsigned char* w /* 16*(num_rounds+1) elements */) {
+                      unsigned char* w /* 16*(num_rounds+1) elements */) const {
         unsigned char temp[4];
         for (int i = 0; i < Nk*Nb; ++i) {
             w[i] = key[i];
@@ -48,20 +50,20 @@ private:
         }
     }
 
-    void SubBytes(unsigned char a[16]) {
+    static void SubBytes(unsigned char a[16]) {
         for (size_t i = 0; i < 16; ++i) {
             a[i] = S_box[a[i]];
         }
     }
 
 
-    void InvSubBytes(unsigned char a[16]) {
+    static void InvSubBytes(unsigned char a[16]) {
         for (size_t i = 0; i < 16; ++i) {
             a[i] = Inv_S_box[a[i]];
         }
     }
 
-    void ShiftRows(unsigned char a[16]) {
+    static void ShiftRows(unsigned char a[16]) {
         unsigned char tmp[16];
 
         tmp[0] = a[0];
@@ -87,7 +89,7 @@ private:
         memcpy(a, tmp, 16);
     }
 
-    void InvShiftRows(unsigned char a[16]) {
+    static void InvShiftRows(unsigned char a[16]) {
         unsigned char tmp[16];
 
         tmp[0] = a[0];
@@ -113,7 +115,7 @@ private:
         memcpy(a, tmp, 16);
     }
 
-    void MixColumns(unsigned char a[16]) {
+    static void MixColumns(unsigned char a[16]) {
         unsigned char tmp[16];
         for (int c = 0; c < 4; ++c) {
             tmp[c * 4] = (unsigned char)(mult2(a[c * 4]) ^ mult3(a[c * 4 + 1]) ^ a[c * 4 + 2] ^ a[c * 4 + 3]);
@@ -124,7 +126,7 @@ private:
         memcpy(a, tmp, 16);
     }
 
-    void InvMixColumns(unsigned char a[16]) {
+    static void InvMixColumns(unsigned char a[16]) {
         unsigned char tmp[16];
         for (int c = 0; c < 4; ++c) {
             tmp[c * 4] = (unsigned char)(GFMul(0x0e, a[c * 4]) ^ GFMul(0x0b, a[c * 4 + 1]) ^ GFMul(0x0d, a[c * 4 + 2]) ^ GFMul(0x09, a[c * 4 + 3]));
@@ -135,13 +137,13 @@ private:
         memcpy(a, tmp, 16);
     }
 
-    void SubWord(unsigned char a[4]) {
+    static void SubWord(unsigned char a[4]) {
         for (size_t i = 0; i < 4; ++i) {
             a[i] = S_box[a[i]];
         }
     }
 
-    void RotWord(unsigned char a[4]) {
+    static void RotWord(unsigned char a[4]) {
         unsigned char tmp[4];
 
         tmp[0] = a[1];
@@ -153,9 +155,9 @@ private:
     }
 
     static unsigned char mult2(unsigned char p) { // multiply by x
-        unsigned char is_high_bit = p & 0x80;
-        unsigned char with_shift = (p << 1) & 0xff;
-        return is_high_bit == 0 ? with_shift : with_shift ^ 0x1b;
+        unsigned char is_high_bit = p & 0x80u;
+        unsigned char with_shift = ((unsigned)p << 1u) & 0xffu;
+        return is_high_bit == 0 ? with_shift : with_shift ^ 0x1bu;
     }
 
     static unsigned char mult3(unsigned char p) { // multiply by x+1
@@ -170,15 +172,45 @@ private:
                 p ^= a;
             }
             hi_bit_set = (unsigned char)(a & (unsigned char)(0x80));
-            a <<= 1;
+            a <<= 1u;
             if (hi_bit_set != 0) {
-                a ^= 0x1b; /* x^8 + x^4 + x^3 + x + 1 */
+                a ^= 0x1bu; /* x^8 + x^4 + x^3 + x + 1 */
             }
-            b >>= 1;
+            b >>= 1u;
         }
         return p;
     }
 
+    void EncryptInternal(unsigned char* text) {
+        AddRoundKey(text, 0);
+        for (int i = 1; i < Nr; ++i) {
+            SubBytes(text);
+            ShiftRows(text);
+            MixColumns(text);
+            AddRoundKey(text, i);
+        }
+        SubBytes(text);
+        ShiftRows(text);
+        AddRoundKey(text, Nr);
+    }
+
+    void DecryptInternal(unsigned char* text) {
+        AddRoundKey(text, Nr);
+        for (int i = 1; i < Nr; ++i) {
+            InvShiftRows(text);
+            InvSubBytes(text);
+            AddRoundKey(text, Nr - i);
+            InvMixColumns(text);
+        }
+        InvShiftRows(text);
+        InvSubBytes(text);
+        AddRoundKey(text, 0);
+    }
+
+    void IncreaseCTRCounter(unsigned char* counter) {
+        auto ptr = (unsigned int*)(counter + bytes - 8);
+        *ptr = *ptr + 1;
+    }
 
 public:
     AES() = default;
@@ -204,30 +236,243 @@ public:
         KeyExpansion(key, round_keys);
     }
 
-    void encrypt(unsigned char* text) {
-        AddRoundKey(text, 0);
-        for (int i = 1; i < Nr; ++i) {
-            SubBytes(text);
-            ShiftRows(text);
-            MixColumns(text);
-            AddRoundKey(text, i);
+    std::string EncryptECB(const std::string& data) {
+        size_t textLenFit = ((data.length() + (bytes - 1)) / bytes) * bytes;
+        auto textBytes = (unsigned char*)malloc(textLenFit);
+        for (int i = 0; i < data.length(); i++) {
+            textBytes[i] = data[i];
         }
-        SubBytes(text);
-        ShiftRows(text);
-        AddRoundKey(text, Nr);
+        for (int i = data.length(); i < textLenFit; i++) {
+            textBytes[i] = 0;
+        }
+        for (int i = 0; i < textLenFit; i += bytes) {
+            EncryptInternal(textBytes + i);
+        }
+        std::string res;
+        res.resize(textLenFit);
+        for (int i = 0; i < textLenFit; i++) {
+            res[i] = textBytes[i];
+        }
+        return res;
     }
 
-    void decrypt(unsigned char* text) {
-        AddRoundKey(text, Nr);
-        for (int i = 1; i < Nr; ++i) {
-            InvShiftRows(text);
-            InvSubBytes(text);
-            AddRoundKey(text, Nr - i);
-            InvMixColumns(text);
+    std::string DecryptECB(std::string data) {
+        auto dataBytes = (unsigned char*)malloc(data.size() + 1);
+        for (int i = 0; i < data.size(); i++) {
+            dataBytes[i] = data[i];
         }
-        InvShiftRows(text);
-        InvSubBytes(text);
-        AddRoundKey(text, 0);
+        for (int i = 0; i < data.size(); i += bytes) {
+            DecryptInternal(dataBytes + i);
+        }
+        dataBytes[data.size()] = '\0';
+        return std::string((char*)dataBytes);
+    }
+
+    std::string EncryptCBC(const std::string& data, const std::string& salt) {
+        size_t textLenFit = ((data.length() + (bytes - 1)) / bytes) * bytes;
+        auto textBytes = (unsigned char*)malloc(textLenFit);
+        auto saltBytes = (unsigned char*)malloc(textLenFit);
+        for (int i = 0; i < bytes; i++) {
+            saltBytes[i] = salt[i];
+        }
+        for (int i = 0; i < data.length(); i++) {
+            textBytes[i] = data[i];
+        }
+        for (int i = data.length(); i < textLenFit; i++) {
+            textBytes[i] = 0;
+        }
+        for (int i = 0; i < textLenFit; i += bytes) {
+            for (int j = 0; j < bytes; j++) {
+                textBytes[i + j] ^= saltBytes[j];
+            }
+            EncryptInternal(textBytes + i);
+            for (int j = 0; j < bytes; j++) {
+                saltBytes[j] = textBytes[i + j];
+            }
+        }
+        std::string res;
+        res.resize(textLenFit);
+        for (int i = 0; i < textLenFit; i++) {
+            res[i] = textBytes[i];
+        }
+        return res;
+    }
+
+    std::string DecryptCBC(std::string data, const std::string& salt) {
+        auto dataBytes = (unsigned char*)malloc(data.size() + 1);
+        auto saltBytes = (unsigned char*)malloc(data.size());
+        auto oldSaltBytes = (unsigned char*)malloc(data.size());
+        for (int i = 0; i < bytes; i++) {
+            saltBytes[i] = salt[i];
+        }
+        for (int i = 0; i < data.size(); i++) {
+            dataBytes[i] = data[i];
+        }
+        for (int i = 0; i < data.size(); i += bytes) {
+            for (int j = 0; j < bytes; j++) {
+                oldSaltBytes[j] = saltBytes[j];
+                saltBytes[j] = dataBytes[i + j];
+            }
+            DecryptInternal(dataBytes + i);
+            for (int j = 0; j < bytes; j++) {
+                dataBytes[i + j] ^= oldSaltBytes[j];
+            }
+        }
+        dataBytes[data.size()] = '\0';
+        return std::string((char*)dataBytes);
+    }
+
+    std::string EncryptCFB(const std::string& data, const std::string& salt) {
+        size_t textLenFit = ((data.length() + (bytes - 1)) / bytes) * bytes;
+        auto textBytes = (unsigned char*)malloc(textLenFit);
+        auto saltBytes = (unsigned char*)malloc(textLenFit);
+        for (int i = 0; i < bytes; i++) {
+            saltBytes[i] = salt[i];
+        }
+        for (int i = 0; i < data.length(); i++) {
+            textBytes[i] = data[i];
+        }
+        for (int i = data.length(); i < textLenFit; i++) {
+            textBytes[i] = 0;
+        }
+        for (int i = 0; i < textLenFit; i += bytes) {
+            EncryptInternal(saltBytes);
+            for (int j = 0; j < bytes; j++) {
+                textBytes[i + j] ^= saltBytes[j];
+                saltBytes[j] = textBytes[i + j];
+            }
+        }
+        std::string res;
+        res.resize(textLenFit);
+        for (int i = 0; i < textLenFit; i++) {
+            res[i] = textBytes[i];
+        }
+        return res;
+    }
+
+    std::string DecryptCFB(std::string data, const std::string& salt) {
+        auto dataBytes = (unsigned char*)malloc(data.size() + 1);
+        auto saltBytes = (unsigned char*)malloc(data.size());
+        auto oldSaltBytes = (unsigned char*)malloc(data.size());
+        for (int i = 0; i < bytes; i++) {
+            saltBytes[i] = salt[i];
+        }
+        for (int i = 0; i < data.size(); i++) {
+            dataBytes[i] = data[i];
+        }
+        for (int i = 0; i < data.size(); i += bytes) {
+            for (int j = 0; j < bytes; j++) {
+                oldSaltBytes[j] = saltBytes[j];
+                saltBytes[j] = dataBytes[i + j];
+            }
+            EncryptInternal(oldSaltBytes);
+            for (int j = 0; j < bytes; j++) {
+                dataBytes[i + j] ^= oldSaltBytes[j];
+            }
+        }
+        dataBytes[data.size()] = '\0';
+        return std::string((char*)dataBytes);
+    }
+
+    std::string EncryptOFB(const std::string& data, const std::string& salt) {
+        size_t textLenFit = ((data.length() + (bytes - 1)) / bytes) * bytes;
+        auto textBytes = (unsigned char*)malloc(textLenFit);
+        auto saltBytes = (unsigned char*)malloc(textLenFit);
+        for (int i = 0; i < bytes; i++) {
+            saltBytes[i] = salt[i];
+        }
+        for (int i = 0; i < data.length(); i++) {
+            textBytes[i] = data[i];
+        }
+        for (int i = data.length(); i < textLenFit; i++) {
+            textBytes[i] = 0;
+        }
+        for (int i = 0; i < textLenFit; i += bytes) {
+            EncryptInternal(saltBytes);
+            for (int j = 0; j < bytes; j++) {
+                textBytes[i + j] ^= saltBytes[j];
+            }
+        }
+        std::string res;
+        res.resize(textLenFit);
+        for (int i = 0; i < textLenFit; i++) {
+            res[i] = textBytes[i];
+        }
+        return res;
+    }
+
+    std::string DecryptOFB(std::string data, const std::string& salt) {
+        auto dataBytes = (unsigned char*)malloc(data.size() + 1);
+        auto saltBytes = (unsigned char*)malloc(data.size());
+        for (int i = 0; i < bytes; i++) {
+            saltBytes[i] = salt[i];
+        }
+        for (int i = 0; i < data.size(); i++) {
+            dataBytes[i] = data[i];
+        }
+        for (int i = 0; i < data.size(); i += bytes) {
+            EncryptInternal(saltBytes);
+            for (int j = 0; j < bytes; j++) {
+                dataBytes[i + j] ^= saltBytes[j];
+            }
+        }
+        dataBytes[data.size()] = '\0';
+        return std::string((char*)dataBytes);
+    }
+
+    std::string EncryptCTR(const std::string& data, const std::string& salt) {
+        size_t textLenFit = ((data.length() + (bytes - 1)) / bytes) * bytes;
+        auto textBytes = (unsigned char*)malloc(textLenFit);
+        auto saltBytes = (unsigned char*)malloc(textLenFit);
+        for (int i = 0; i < bytes - 8; i++) {
+            saltBytes[i] = salt[i];
+        }
+        for (int i = bytes - 8; i < bytes; i++) {
+            saltBytes[i] = 0;
+        }
+        for (int i = 0; i < data.length(); i++) {
+            textBytes[i] = data[i];
+        }
+        for (int i = data.length(); i < textLenFit; i++) {
+            textBytes[i] = 0;
+        }
+        for (int i = 0; i < textLenFit; i += bytes) {
+            EncryptInternal(saltBytes);
+            IncreaseCTRCounter(saltBytes);
+            for (int j = 0; j < bytes; j++) {
+                textBytes[i + j] ^= saltBytes[j];
+            }
+        }
+        std::string res;
+        res.resize(textLenFit);
+        for (int i = 0; i < textLenFit; i++) {
+            res[i] = textBytes[i];
+        }
+        return res;
+    }
+
+    std::string DecryptCTR(std::string data, const std::string& salt) {
+        auto dataBytes = (unsigned char*)malloc(data.size() + 1);
+        auto saltBytes = (unsigned char*)malloc(data.size());
+
+        for (int i = 0; i < bytes - 8; i++) {
+            saltBytes[i] = salt[i];
+        }
+        for (int i = bytes - 8; i < bytes; i++) {
+            saltBytes[i] = 0;
+        }
+        for (int i = 0; i < data.size(); i++) {
+            dataBytes[i] = data[i];
+        }
+        for (int i = 0; i < data.size(); i += bytes) {
+            EncryptInternal(saltBytes);
+            IncreaseCTRCounter(saltBytes);
+            for (int j = 0; j < bytes; j++) {
+                dataBytes[i + j] ^= saltBytes[j];
+            }
+        }
+        dataBytes[data.size()] = '\0';
+        return std::string((char*)dataBytes);
     }
 };
 

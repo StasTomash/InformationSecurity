@@ -29,7 +29,7 @@ int main() {
 
     clock_t begin = clock();
     for (int j = 0; j < n; j++) {
-        aes4.encrypt((unsigned char*)(&huge_arr[j*16]));
+        aes4.EncryptInternal((unsigned char *) (&huge_arr[j * 16]));
     }
 
     clock_t end = clock();
