@@ -21,7 +21,7 @@ std::vector<unsigned int> GenerateWordVector(size_t len) {
     return res;
 }
 
-TEST(Salsa20Test, RC4Test) {
+TEST(Salsa20Test, Salsa20Test) {
     Salsa20 salsa20;
     std::vector<unsigned char> data, cipher;
     std::vector<unsigned int> key;

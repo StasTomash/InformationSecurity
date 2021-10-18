@@ -4,7 +4,6 @@ project(InformationSecurity)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(kalyna kalyna_main.cpp Kalyna/kalyna.h Kalyna/constants.h)
-add_executable(aes aes_main.cpp AES/AES.h AES/constants.h)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -26,3 +25,5 @@ target_link_libraries(rc4_test gtest_main)
 
 add_executable(salsa20_test Salsa20/salsa20_test.cpp Salsa20/salsa20.h)
 target_link_libraries(salsa20_test gtest_main)
+
+add_executable(benchmark benchmark.cpp AES/AES.h AES/constants.h Kalyna/kalyna.h Kalyna/constants.h RC4/rc4.h Salsa20/salsa20.h)

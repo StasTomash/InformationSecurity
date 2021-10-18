@@ -362,7 +362,6 @@ private:
 
     std::vector<WORD_TYPE> EncipherInternal(std::vector<WORD_TYPE> text) {
         state = std::move(text);
-        std::cerr << "\n";
         LogState();
         AddRoundKey(0);
         LogState();
@@ -382,7 +381,6 @@ private:
 
     std::vector<WORD_TYPE> DecipherInternal(std::vector<WORD_TYPE> cipher) {
         state = std::move(cipher);
-        std::cerr << "\n";
         LogState();
         SubRoundKey(roundsCnt);
         LogState();
