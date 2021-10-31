@@ -26,4 +26,7 @@ target_link_libraries(rc4_test gtest_main)
 add_executable(salsa20_test Salsa20/salsa20_test.cpp Salsa20/salsa20.h)
 target_link_libraries(salsa20_test gtest_main)
 
+add_executable(sha256_test SHA256/sha256.h SHA256/constants.h SHA256/sha256_test.cpp)
+target_link_libraries(sha256_test gtest_main)
+
 add_executable(benchmark benchmark.cpp AES/AES.h AES/constants.h Kalyna/kalyna.h Kalyna/constants.h RC4/rc4.h Salsa20/salsa20.h)
