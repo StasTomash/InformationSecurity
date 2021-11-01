@@ -36,7 +36,7 @@ private:
         for (auto item : data) {
             unsigned char* charItem = reinterpret_cast<unsigned char*>(&item);
             for (int i = 0; i < typeLen; i++) {
-                charData.push_back(charItem[i]);
+                charData.push_back(charItem[typeLen - i - 1]);
             }
         }
         return charData;
