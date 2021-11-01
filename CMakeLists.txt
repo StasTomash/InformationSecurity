@@ -3,8 +3,6 @@ project(InformationSecurity)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(kalyna kalyna_main.cpp Kalyna/kalyna.h Kalyna/constants.h)
-
 include(FetchContent)
 FetchContent_Declare(
         googletest
@@ -33,3 +31,4 @@ add_executable(kupyna_test Kupyna256/kupyna256.h Kupyna256/constants.h Kupyna256
 target_link_libraries(kupyna_test gtest_main)
 
 add_executable(benchmark benchmark.cpp AES/AES.h AES/constants.h Kalyna/kalyna.h Kalyna/constants.h RC4/rc4.h Salsa20/salsa20.h)
+add_executable(hash_benchmark hash_benchmark.cpp Kupyna256/kupyna256.h Kupyna256/constants.h SHA256/sha256.h SHA256/constants.h)

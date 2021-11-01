@@ -6,14 +6,44 @@
 #define INFORMATIONSECURITY_KUPYNA256_H
 
 #include "constants.h"
+#include <vector>
+#include <cassert>
 
 #define FIELD_POLYNOMIAL 0x011Dull
 #define ROUNDS 10
 
+unsigned char ReverseBits(unsigned char b) {
+    b = (b & 0xF0u) >> 4u | (b & 0x0Fu) << 4u;
+    b = (b & 0xCCu) >> 2u | (b & 0x33u) << 2u;
+    b = (b & 0xAAu) >> 1u | (b & 0x55u) << 1u;
+    return b;
+}
+
+void PadCharData(std::vector<unsigned char>& data) {
+    auto nextChar = (unsigned char)(1u << 7u);
+    size_t bitLen = data.size() * 8;
+    size_t zeroBits = 512 - (bitLen + 97) % 512;
+    assert(zeroBits >= 7);
+    zeroBits -= 7;
+    data.push_back(nextChar);
+    while (zeroBits > 0) {
+        data.push_back(0);
+        zeroBits -= 8;
+    }
+    unsigned long long bitLen64 = bitLen;
+    auto* bitLenChar = reinterpret_cast<unsigned char*>(&bitLen64);
+    for (int i = 0; i < 8; i++) {
+        data.push_back(bitLenChar[i]);
+    }
+    for (int i = 0; i < 4; i++) {
+        data.push_back(0);
+    }
+}
+
 class Kupyna256 {
 private:
     unsigned char state[8][8];
-    std::vector<unsigned char> initializerHash = { 0x01u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    std::vector<unsigned char> initializerHash = { 0x40u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
                                                   0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
                                                   0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
                                                   0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
@@ -32,26 +62,6 @@ private:
         }
         return charData;
     }
-    static void PadCharData(std::vector<unsigned char>& data) {
-        auto nextChar = (unsigned char)(1u << 7u);
-        size_t bitLen = data.size() * 8;
-        size_t zeroBits = 512 - (bitLen + 97) % 512;
-        assert(zeroBits >= 7);
-        zeroBits -= 7;
-        data.push_back(nextChar);
-        while (zeroBits > 0) {
-            data.push_back(0);
-            zeroBits -= 8;
-        }
-        unsigned long long bitLen64 = bitLen;
-        auto* bitLenChar = reinterpret_cast<unsigned char*>(&bitLen64);
-        for (int i = 0; i < 4; i++) {
-            data.push_back(0);
-        }
-        for (int i = 0; i < 8; i++) {
-            data.push_back(bitLenChar[7 - i]);
-        }
-    }
     void AddRoundKeyMod2(size_t round) {
         for (size_t i = 0; i < 8; i++) {
             state[0][i] ^= (i << 4u) ^ round;
@@ -59,30 +69,30 @@ private:
     }
     unsigned long long ColumnToUInt64(size_t columnNum) {
         return (
-            (unsigned long long)state[columnNum][0] << 56ull |
-            (unsigned long long)state[columnNum][1] << 48ull |
-            (unsigned long long)state[columnNum][2] << 40ull |
-            (unsigned long long)state[columnNum][3] << 32ull |
-            (unsigned long long)state[columnNum][4] << 24ull |
-            (unsigned long long)state[columnNum][5] << 16ull |
-            (unsigned long long)state[columnNum][6] << 8ull |
-            (unsigned long long)state[columnNum][7] << 0ul
+            (unsigned long long)state[0][columnNum] << 0ull |
+            (unsigned long long)state[1][columnNum] << 8ull |
+            (unsigned long long)state[2][columnNum] << 16ull |
+            (unsigned long long)state[3][columnNum] << 24ull |
+            (unsigned long long)state[4][columnNum] << 32ull |
+            (unsigned long long)state[5][columnNum] << 40ull |
+            (unsigned long long)state[6][columnNum] << 48ull |
+            (unsigned long long)state[7][columnNum] << 56ul
         );
     }
     void UInt64ToColumn(size_t columnNum, unsigned long long x) {
-        state[columnNum][0] = x >> 56ull;
-        state[columnNum][1] = x >> 48ull;
-        state[columnNum][2] = x >> 40ull;
-        state[columnNum][3] = x >> 32ull;
-        state[columnNum][4] = x >> 24ull;
-        state[columnNum][5] = x >> 16ull;
-        state[columnNum][6] = x >> 8ull;
-        state[columnNum][7] = x >> 0ull;
+        state[0][columnNum] = x >> 0ull;
+        state[1][columnNum] = x >> 8ull;
+        state[2][columnNum] = x >> 16ull;
+        state[3][columnNum] = x >> 24ull;
+        state[4][columnNum] = x >> 32ull;
+        state[5][columnNum] = x >> 40ull;
+        state[6][columnNum] = x >> 48ull;
+        state[7][columnNum] = x >> 56ull;
     }
     void AddRoundKeyMod64(size_t round) {
         for (int i = 0; i < 8; i++) {
             unsigned long long x = ColumnToUInt64(i);
-            x += 0xF3F0F0F0F0F0F000ull ^ ((7ull - i) << 4ull) ^ round;
+                x += 0x00F0F0F0F0F0F0F3ull ^ ((((7ull - i) << 4ull) ^ round) << 56ull);
             UInt64ToColumn(i, x);
         }
     }
@@ -145,6 +155,31 @@ private:
         }
         return res;
     }
+    static std::vector<unsigned char> SeqXor(std::vector<unsigned char> x, std::vector<unsigned char> y) {
+        std::vector<unsigned char> seq;
+        seq.reserve(x.size());
+        assert(x.size() == y.size());
+        for (int i = 0; i < x.size(); i++) {
+            seq.push_back(x[i] ^ y[i]);
+        }
+        return seq;
+    }
+    std::vector<unsigned char> ProcessBlock(const std::vector<unsigned char>& prevHash, const std::vector<unsigned char>& block) {
+        return SeqXor(TransformationT1(SeqXor(prevHash, block)), SeqXor(TransformationT2(block), prevHash));
+    }
+    std::vector<unsigned int> FormHash(const std::vector<unsigned char>& hash) {
+        std::vector<unsigned char> finalHash = SeqXor(TransformationT1(hash), hash);
+        std::vector<unsigned int> ans;
+        for (int i = 32; i < 64; i += 4) {
+            ans.push_back(((unsigned int)(finalHash[i]) << 24u) |
+                          ((unsigned int)(finalHash[i + 1]) << 16u) |
+                          ((unsigned int)(finalHash[i + 2]) << 8u) |
+                          ((unsigned int)(finalHash[i + 3]) << 0u));
+        }
+        return ans;
+    }
+
+public:
     std::vector<unsigned char> TransformationT1(std::vector<unsigned char> seq) {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
@@ -173,30 +208,6 @@ private:
         }
         return StateToSeq();
     }
-    static std::vector<unsigned char> SeqXor(std::vector<unsigned char> x, std::vector<unsigned char> y) {
-        std::vector<unsigned char> seq;
-        seq.reserve(x.size());
-        for (int i = 0; i < x.size(); i++) {
-            seq.push_back(x[i] ^ y[i]);
-        }
-        return seq;
-    }
-    std::vector<unsigned char> ProcessBlock(const std::vector<unsigned char>& prevHash, const std::vector<unsigned char>& block) {
-        return SeqXor(TransformationT1(SeqXor(prevHash, block)), SeqXor(TransformationT2(block), prevHash));
-    }
-    std::vector<unsigned int> FormHash(const std::vector<unsigned char>& hash) {
-        std::vector<unsigned char> finalHash = SeqXor(TransformationT1(hash), hash);
-        std::vector<unsigned int> ans;
-        for (int i = 0; i < 32; i += 4) {
-            ans.push_back(((unsigned int)(finalHash[i]) << 24u) |
-                          ((unsigned int)(finalHash[i + 1]) << 16u) |
-                          ((unsigned int)(finalHash[i + 2]) << 8u) |
-                          ((unsigned int)(finalHash[i + 3]) << 0u));
-        }
-        return ans;
-    }
-
-public:
     template<typename T> std::vector<unsigned int> GetHash(std::vector<T> data) {
         auto convertedData = ConvertToChar(data);
         PadCharData(convertedData);

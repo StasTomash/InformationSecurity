@@ -30,3 +30,13 @@ Benchmarking results for different ciphers (deciphering):
 | Kalyna ECB | 512 bits key, 512 bits block | 10MB | 123.2s |
 | RC4 | 256 bytes key | 100MB | 3.4s |
 | Salsa20 | | 100MB | 1.2s |
+
+Benchmarking results for Proof-of-Work with different hashes:
+
+| Hash | Prefix size (bits) | Experiment Iterations | Time per iteration | Guesses per iteration |
+|:----:|:------------------:|:---------------------:|:------------------:|:---------------------:|
+| Kupyna-256 | 10 | 100 | 1695 ms | 949 |
+| Kupyna-256 | 12 | 100 | 5932 ms | 3393 |
+| SHA-256 | 10 | 100 | 19 ms | 873 |
+| SHA-256 | 12 | 100 | 77 ms | 3562 |
+| SHA-256 | 15 | 100 | 2819 ms | 130164 |
