@@ -30,5 +30,13 @@ target_link_libraries(sha256_test gtest_main)
 add_executable(kupyna_test Kupyna256/kupyna256.h Kupyna256/constants.h Kupyna256/kupyna_test256.cpp)
 target_link_libraries(kupyna_test gtest_main)
 
+add_subdirectory(BigInteger)
+
+add_executable(rsa_test RSA/rsa.h RSA/rsa_test.cpp)
+target_link_libraries(rsa_test gtest_main BigInteger)
+
+
 add_executable(benchmark benchmark.cpp AES/AES.h AES/constants.h Kalyna/kalyna.h Kalyna/constants.h RC4/rc4.h Salsa20/salsa20.h)
 add_executable(hash_benchmark hash_benchmark.cpp Kupyna256/kupyna256.h Kupyna256/constants.h SHA256/sha256.h SHA256/constants.h)
+add_executable(rsa_benchmark RSA/rsa_benchmark.cpp RSA/rsa.h)
+target_link_libraries(rsa_benchmark BigInteger)

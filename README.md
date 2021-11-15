@@ -40,3 +40,11 @@ Benchmarking results for Proof-of-Work with different hashes:
 | SHA-256 | 10 | 100 | 19 ms | 873 |
 | SHA-256 | 12 | 100 | 77 ms | 3562 |
 | SHA-256 | 15 | 100 | 2819 ms | 130164 |
+
+Benchmarking of RSA with different key length (messages of length 256):
+
+| Key Len | Key Generation Time | Encryption Time | Decryption Time | Decryption Time (chinese rem. theorem) |
+|:-------:|:-------------------:|:---------------:|:---------------:|:--------------------------------------:|
+| 64 | 1.78s | 4.02s | 31.85s | 8.89s |
+| 96 | 35.38s | 7.39s | | 26.31s |
+| 128 | 91.47s | 13.52s | | 53.59s |
