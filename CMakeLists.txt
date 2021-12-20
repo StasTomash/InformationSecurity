@@ -35,6 +35,9 @@ add_subdirectory(BigInteger)
 add_executable(rsa_test RSA/rsa.h RSA/rsa_test.cpp)
 target_link_libraries(rsa_test gtest_main BigInteger)
 
+add_executable(ecdsa_test ECDSA/ecdsa.h ECDSA/ecdsa_test.cpp)
+target_link_libraries(ecdsa_test BigInteger gtest_main)
+
 
 add_executable(benchmark benchmark.cpp AES/AES.h AES/constants.h Kalyna/kalyna.h Kalyna/constants.h RC4/rc4.h Salsa20/salsa20.h)
 add_executable(hash_benchmark hash_benchmark.cpp Kupyna256/kupyna256.h Kupyna256/constants.h SHA256/sha256.h SHA256/constants.h)

@@ -1,8 +1,5 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "cert-msc50-cpp"
-//
-// Created by stast on 11/14/2021.
-//
 
 #include "rsa.h"
 #include <chrono>
@@ -20,7 +17,7 @@ int main() {
     for (int i = 0; i < 256; i++) {
         message += char(rand() % 60 + 60);
     }
-    std::vector<int> keySizes( { 64, 96, 128 } );
+    std::vector<int> keySizes( { 1024 } );
     for (auto keyLen : keySizes) {
         RSAKeyPair keyPair;
         size_t time;

@@ -22,10 +22,10 @@ struct RSAPrivateKey {
     RSAPrivateKey(const RSAPrivateKey& other) = default;
     RSAPrivateKey(BigInt::BigInteger _p, BigInt::BigInteger _q, BigInt::BigInteger _e) : p(_p), q(_q) {
         n = p * q;
-        d = BigInt::inverseInCircle(_e, lcm(p - BigInt::BigInteger(1), q - BigInt::BigInteger(1)));
+        d = BigInt::InverseInCircle(_e, lcm(p - BigInt::BigInteger(1), q - BigInt::BigInteger(1)));
         dP = d % (p - BigInt::BigInteger(1));
         dQ = d % (q - BigInt::BigInteger(1));
-        qInv = BigInt::inverseInCircle(q, p);
+        qInv = BigInt::InverseInCircle(q, p);
     }
 };
 
